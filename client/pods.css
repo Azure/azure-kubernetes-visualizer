@@ -1,0 +1,212 @@
+/*
+========================================================================
+Copyright 2014 Microsoft Corporation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+========================================================================
+*/
+
+/*** Forms UI ***/
+.top-ui {
+  display: inline-block;
+  width: 29.5%;
+  vertical-align: top;
+}
+
+.top-ui:first-child {
+  width: 40%;
+}
+
+.top-ui th {
+  font-weight: normal;;
+  text-align: left;
+  padding-right: 30px;
+}
+
+.top-ui td {
+  font-weight: normal;;
+  text-align: right;
+}
+
+.top-ui td div {
+  font-weight: normal;;
+  text-align: left;
+}
+
+.config-editor { 
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+}
+
+.ui-widget {
+  font-size: 1.0em;
+}
+
+/*** Pods UI ***/
+#container {
+  width: 100%;
+  display: block;
+  clear: both;
+  margin-top: 50px;
+}
+
+.host {
+  display: inline-block;
+  min-height: 500px;
+  vertical-align: top;
+}
+
+.nohost {
+  display: block;
+  width: 100%;
+  clear: both;
+}
+
+.host .hostname {
+  width: 100%;
+  text-align: center;
+  display: block;
+}
+
+.pod {
+  border: 5px solid #333;
+  background-color: #333;
+  border-radius: 3px;
+  min-height: 60px;
+  width: 110px;
+  padding: 3px;
+  float: left;
+  margin: 5px;
+}
+
+.pod .container {
+  border-radius: 10px;
+  background-color: #333;
+  width: 100px;
+  padding: 2.5px;
+  margin: 2.5px;
+  text-align: center;
+}
+
+.pod .container.loaded {
+  color: white;
+}
+
+.pod .container.not-loaded {
+  color: red;
+}
+
+.loading
+{
+    left: 35%;
+    top: 15%    
+}
+
+@-webkit-keyframes loading {
+  0% {
+    -webkit-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -ms-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+@-moz-keyframes loading {
+  0% {
+    -webkit-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -ms-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+@-o-keyframes loading {
+  0% {
+    -webkit-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -ms-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loading {
+  0% {
+    -webkit-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -ms-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+/* Styles for old versions of IE */
+.loading {
+  font-family: sans-serif;
+  font-weight: 100;
+}
+
+/* :not(:required) hides this rule from IE9 and below */
+.loading:not(:required) {
+  -webkit-animation: loading 1250ms infinite linear;
+  -moz-animation: loading 1250ms infinite linear;
+  -ms-animation: loading 1250ms infinite linear;
+  -o-animation: loading 1250ms infinite linear;
+  animation: loading 1250ms infinite linear;
+  border: 8px solid #3388ee;
+  border-right-color: transparent;
+  border-radius: 16px;
+  box-sizing: border-box;
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  text-indent: -9999px;
+  width: 32px;
+  height: 32px;
+}
+

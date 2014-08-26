@@ -1,0 +1,290 @@
+<!doctype html>
+<html>
+	<head>
+		<link rel="stylesheet" href="//code.jquery.com/ui/1.11.0/themes/smoothness/jquery-ui.css">
+		<link rel="stylesheet" type="text/css" href="pods.css" media="screen" />
+		<script type="text/javascript" src="/socket.io/socket.io.js"></script>
+
+		<script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-2.1.1.min.js"></script>
+		<script type="text/javascript" src="http://code.jquery.com/ui/1.11.0/jquery-ui.js"></script>
+
+		<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/ace/1.1.3/ace.js" type="text/javascript" charset="utf-8"></script>
+		<script type="text/javascript" src="/PodDisplayManager.js"></script>
+
+		<script type="text/javascript">
+			// UI elements initializations
+			var socket = io();
+			$(function() {
+				
+				var DisplayManager = new PodDisplayManager($('#container'));
+				var podId = Math.floor( Math.random() * 100000000000000 );
+				var disableEditorChangeEvent = true;
+				
+				socket.emit('get_pods');
+				socket.emit('get_base_config', getStartParameters());
+
+				socket.on('pods', function(pods) {
+					// console.log(pods);
+					DisplayManager.Update(pods);
+				});
+
+				// Init the json editor
+				var podEditor = ace.edit('create-config-editor');
+				podEditor.setTheme('ace/theme/monokai');
+				podEditor.getSession().setMode('ace/mode/json');
+				document.getElementById('create-config-editor').style.fontSize='14px';
+
+				var replicaEditor = ace.edit('create-config-replica-editor');
+				replicaEditor.setTheme('ace/theme/monokai');
+				replicaEditor.getSession().setMode('ace/mode/json');
+				document.getElementById('create-config-replica-editor').style.fontSize='14px';
+
+				// Initialize spinner (number of containers field)
+				var maxReps = 1000;
+				var numberOfContainers = 
+					$("#number")
+						.spinner(({
+							spin: function( event, ui ) {
+								if ( ui.value > maxReps ) {
+									$( this ).spinner( "value", maxReps );
+									return false;
+								} else if ( ui.value < 1 ) {
+									$( this ).spinner( "value", 1 );
+									return false;
+								}
+							}
+						}))
+						.spinner({
+							change: function(event, ui) {
+								if ($(this).spinner("value") > maxReps || $(this).spinner("value") < 1) {
+									$(this).spinner("value", 1);
+								}
+							}
+						})
+						.spinner("value", 1);
+
+				// Initialize start button
+				$("#start")
+					.button()
+					.click(function(event){
+						var startParameters = getStartParameters();
+							
+						console.log("Creating container", startParameters);
+						socket.emit("create_replicated_pod", startParameters);
+
+						NewPodId();
+					});
+
+				$("#start-from-source")
+					.button()
+					.click(function(event){
+						var startParameters = getStartParameters();
+
+						try {
+							startParameters.RawRequest = JSON.parse(podEditor.getValue());
+						} catch (exc) {
+							console.error("Exception getting source: ", exc);
+							alert("Error: The pod source is not valid json.");
+							return;
+						}
+
+						console.log("Creating container from source", startParameters);
+						socket.emit("create_replicated_pod", startParameters);
+
+						NewPodId();
+					});
+
+				function NewPodId() {
+					podId = Math.floor( Math.random() * 100000000000000 );
+					updateCodeEditor();
+				}
+
+				$("#show-pod-source").button().click(function(){ $('.pod-source-container, #start-from-source').toggle(); });
+				$("#show-rc-source").button().click(function(){ $('.rc-source-container').toggle(); });
+
+				function getStartParameters() {
+					return {
+							Name: $("#ui-widget-contentainerName").val(),
+							Image: "",
+							Labels: { Id: podId },
+							Replicas: $("#number").val(),
+							RawRequest: null,
+						};
+				}
+
+				socket.on('set_base_config', function (startObj) {
+					podEditor.setValue(JSON.stringify(startObj['pods'], undefined, 2));
+					replicaEditor.setValue(JSON.stringify(startObj['replicas'], undefined, 2));
+					disableEditorChangeEvent = false;
+				});
+
+				$('#create-form input').on('keyup', updateCodeEditor);
+				
+				podEditor.getSession().on('change', function(e) {
+					if (disableEditorChangeEvent) return;
+
+					disableEditorChangeEvent = true;
+					try {
+						var position = replicaEditor.selection.getCursor();
+						var obj = JSON.parse(podEditor.getValue());
+						var replicaObj = JSON.parse(replicaEditor.getValue());
+
+						replicaObj.desiredState.podTemplate.desiredState = obj.desiredState;
+
+						replicaEditor.setValue(JSON.stringify(replicaObj, undefined, 2));
+						replicaEditor.selection.clearSelection()
+						replicaEditor.moveCursorToPosition(position);
+					} catch (exc) {
+
+					}
+					disableEditorChangeEvent = false;
+				})
+
+				replicaEditor.getSession().on('change', function(e) {
+					if (disableEditorChangeEvent) return;
+
+					disableEditorChangeEvent = true;
+					try {
+						var position = podEditor.selection.getCursor();
+						var obj = JSON.parse(replicaEditor.getValue());
+						var podObj = JSON.parse(podEditor.getValue());
+						
+						var podTemplate = obj.desiredState.podTemplate;
+
+						podObj.desiredState = podTemplate.desiredState;
+
+						podEditor.setValue(JSON.stringify(podObj, undefined, 2));
+						podEditor.selection.clearSelection()
+						podEditor.moveCursorToPosition(position);
+					} catch (exc) {
+
+					}
+					disableEditorChangeEvent = false;
+				})
+
+				function updateCodeEditor(e) {
+					disableEditorChangeEvent = true;
+					var name = $('#ui-widget-contentainerName').val();
+
+					// Update podeditor
+					try {
+						var position = podEditor.selection.getCursor();
+						var obj = JSON.parse(podEditor.getValue());
+
+						for (var c in obj.desiredState.manifest.containers) {
+							if (obj.desiredState.manifest.containers.length > 1) {
+								obj.desiredState.manifest.containers[c].name = name + "-" + c;
+							} else {
+								obj.desiredState.manifest.containers[c].name = name;
+							}
+
+							obj.desiredState.manifest.containers[c].name = obj.desiredState.manifest.containers[c].name.toLowerCase();
+						}
+
+						obj.labels.name = GetNameSlug(name);
+						obj.labels.Id = "" + podId;
+						obj.id = "" + podId;
+						obj.desiredState.manifest.id = "" + podId;
+
+						podEditor.setValue(JSON.stringify(obj, undefined, 2));
+						podEditor.selection.clearSelection()
+						podEditor.moveCursorToPosition(position);
+					} catch (exc) {
+
+					}
+
+					// Update replica editor
+					try {
+						var position = replicaEditor.selection.getCursor();
+						var obj = JSON.parse(replicaEditor.getValue());
+
+						for (var c in obj.desiredState.podTemplate.desiredState.manifest.containers) {
+							if (obj.desiredState.podTemplate.desiredState.manifest.containers.length > 1) {
+								obj.desiredState.podTemplate.desiredState.manifest.containers[c].name = name + "-" + c;
+							} else {
+								obj.desiredState.podTemplate.desiredState.manifest.containers[c].name = name;
+							}
+						}
+
+						obj.id = "" + podId;
+						obj.labels.name = GetNameSlug(name);
+						obj.labels.id = "" + podId;
+						obj.desiredState.podTemplate.labels.name = GetNameSlug(name);
+						obj.desiredState.podTemplate.labels.id = "" + podId;
+						obj.desiredState.replicaSelector.name = GetNameSlug(name);
+						obj.desiredState.replicaSelector.id = "" + podId;
+
+						replicaEditor.setValue(JSON.stringify(obj, undefined, 2));
+						replicaEditor.selection.clearSelection()
+						replicaEditor.moveCursorToPosition(position);
+					} catch (exc) {
+
+					}
+
+					disableEditorChangeEvent = false
+				}
+
+				function GetNameSlug(name) {
+					return name.replace(/[^a-zA-Z0-9]+/g, '').toLowerCase();
+				}
+
+				$(".config-editor")
+					.resizable({ 'handles': 's' })
+					.resize(function (e) {
+						$("#create-config").tabs('refresh');
+						podEditor.resize();
+						replicaEditor.resize();
+					});
+			});
+		</script>
+	</head>
+	<body>
+		<div id="top-frame">
+			<div id="create" class="top-ui">
+				<h3>Create Kubernetes pods</h3>
+				<table id="create-form">
+					<tbody>
+						<tr>
+							<th>
+								<label for="containerName">Name for pods:</label>
+							</th>
+							<td>
+								<span class="ui-widget ui-widget-content ui-corner-all" style="border:none;"><input class="ui-widget" style="border-radius:4px; margin:.2em; padding: .2em; border:1px solid #aaaaaa;" id="ui-widget-contentainerName" name="containerName" value=""></span>
+							</td>
+						</tr>
+						<tr>
+							<th>
+								<label for="number">Number of pods:</label>
+							</th>
+							<td>
+								<input id="number" name="number">
+							</td>
+						</tr>
+						<tr>
+							<th>
+								<button id="show-pod-source">Pod Source</button>
+								<button id="show-rc-source">RC Source</button>
+							</th>
+							<td>
+								<button id="start">Create!</button>
+								<button id="start-from-source" style="display:none">Create from Source</button>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div class="top-ui source-container pod-source-container" style="display: none">
+				<h3>Pod Source</h3>
+				<div class="config-editor" id="create-config-editor"></div>
+			</div>
+			<div class="top-ui source-container rc-source-container" style="display: none">
+				<h3>ReplicationController Source</h3>
+				<div class="config-editor" id="create-config-replica-editor"></div>
+			</div>
+			<div id="nohost"></div>
+
+		</div>
+        
+        <div id="container"></div>
+	</body>
+</html>
